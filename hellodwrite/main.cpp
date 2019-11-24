@@ -4,9 +4,7 @@
 #include "comutil.hpp"
 #include "dwutil.hpp"
 
-#include <iostream>
-#include <functional>
-#include <vector>
+#include <dwrite_2.h>
 
 #include <clocale>
 
@@ -40,8 +38,8 @@ int _tmain(void) {
 		WS_OVERLAPPEDWINDOW | CS_HREDRAW | CS_VREDRAW,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
-		600,
-		600,
+		1200,
+		500,
 		nullptr,
 		nullptr,
 		hInstance,
@@ -72,10 +70,15 @@ int _tmain(void) {
 			goto error;
 		}
 		if (PrintError(_T("DWriteCreateFactory"),
-			::DWriteCreateFactory(::DWRITE_FACTORY_TYPE_SHARED, __uuidof(::IDWriteFactory),
+			::DWriteCreateFactory(::DWRITE_FACTORY_TYPE_SHARED, __uuidof(::IDWriteFactory2),
 				reinterpret_cast<::IUnknown **>(&dwFactory)))) {
 			goto error;
 		}
+
+#if _DEBUG
+		IDWriteFontFallback *ff;
+		reinterpret_cast<IDWriteFactory2 *>(dwFactory)->GetSystemFontFallback(&ff);
+#endif
 
 		::RECT rect;
 		::GetClientRect(hWnd, &rect);
@@ -158,11 +161,11 @@ int _tmain(void) {
 
 			renderTarget->SetTextRenderingParams(paramsForClearType.get());
 			renderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
-			renderer.Draw(L"ClearType");
+			renderer.Draw(L"ClearType アンチエイリアス");
 
 			renderTarget->SetTextRenderingParams(paramsForGrayscale.get());
 			renderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
-			renderer.Draw(L"\nGrayscale AA");
+			renderer.Draw(L"\nグレースケール アンチエイリアス");
 		}
 
 		renderTarget->EndDraw();
