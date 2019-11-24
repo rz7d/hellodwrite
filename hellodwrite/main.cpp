@@ -61,8 +61,9 @@ int _tmain(void) {
 
 ::LRESULT CALLBACK WndProc(::HWND hWnd, ::UINT msg, ::WPARAM wParam, ::LPARAM lParam) {
 	static ::ID2D1Factory *d2dFactory;
-	static ::IDWriteFactory *dwFactory;
 	static ::ID2D1HwndRenderTarget *renderTarget;
+	static ::IDWriteFactory *dwFactory;
+	static ::IDWriteRenderingParams *defaultParams;
 
 	switch (msg) {
 	case WM_CREATE: {
@@ -87,25 +88,12 @@ int _tmain(void) {
 			goto error;
 		}
 
-		::com_ptr<::IDWriteRenderingParams> defaultParams(
-			[](auto **x) {return dwFactory->CreateRenderingParams(x); }
-		);
-
-		::com_ptr<::IDWriteRenderingParams> params(
-			[&defaultParams](auto **x) {
-				return dwFactory->CreateCustomRenderingParams(
-					defaultParams->GetGamma(),
-					defaultParams->GetEnhancedContrast(),
-					defaultParams->GetClearTypeLevel(),
-					defaultParams->GetPixelGeometry(),
-					DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC,
-					x
-				);
-			}
-		);
-
-		renderTarget->SetTextRenderingParams(params.get());
-		renderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
+		if (PrintError(_T("CreateRenderingParams"),
+			dwFactory->CreateRenderingParams(
+				&defaultParams
+			))) {
+			goto error;
+		}
 
 		goto exit;
 	}
@@ -139,9 +127,42 @@ int _tmain(void) {
 			}
 		);
 
+		::com_ptr<::IDWriteRenderingParams> paramsForClearType(
+			[](auto **x) {
+				return dwFactory->CreateCustomRenderingParams(
+					defaultParams->GetGamma(),
+					defaultParams->GetEnhancedContrast(),
+					defaultParams->GetClearTypeLevel(),
+					defaultParams->GetPixelGeometry(),
+					DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC,
+					x
+				);
+			}
+		);
+
+		::com_ptr<::IDWriteRenderingParams> paramsForGrayscale(
+			[](auto **x) {
+				return dwFactory->CreateCustomRenderingParams(
+					defaultParams->GetGamma(),
+					defaultParams->GetEnhancedContrast(),
+					defaultParams->GetClearTypeLevel(),
+					defaultParams->GetPixelGeometry(),
+					DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC,
+					x
+				);
+			}
+		);
+
 		if (brush.is_available() && textFormat.is_available()) {
 			::CDWriteTextRenderer renderer(dwFactory, renderTarget, textFormat.get(), brush.get());
-			renderer.Draw(L"hello\nこんにちは\n你好");
+
+			renderTarget->SetTextRenderingParams(paramsForClearType.get());
+			renderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
+			renderer.Draw(L"ClearType");
+
+			renderTarget->SetTextRenderingParams(paramsForGrayscale.get());
+			renderTarget->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
+			renderer.Draw(L"\nGrayscale AA");
 		}
 
 		renderTarget->EndDraw();
@@ -150,6 +171,7 @@ int _tmain(void) {
 	}
 
 	case WM_DESTROY:
+		defaultParams->Release();
 		renderTarget->Release();
 		dwFactory->Release();
 		d2dFactory->Release();
