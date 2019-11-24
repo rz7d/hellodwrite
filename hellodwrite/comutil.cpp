@@ -10,6 +10,6 @@ CoContext::~CoContext() {
 	CoUninitialize();
 }
 
-HRESULT CoContext::Result() {
+::HRESULT CoContext::Result() {
 	return m_result;
 }

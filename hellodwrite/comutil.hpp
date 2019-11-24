@@ -5,16 +5,14 @@
 
 #include <functional>
 
-#include <tchar.h>
-
 template<typename T>
 class com_ptr final {
 private:
 	T *m_ptr{};
 
 public:
-	com_ptr(std::function<HRESULT(T **)> initializer) {
-		if (::PrintError(_T(""), initializer(&m_ptr))) {
+	com_ptr(std::function<::HRESULT(T **)> initializer) {
+		if (::PrintError(TEXT(""), initializer(&m_ptr))) {
 			m_ptr = nullptr;
 		}
 	}
@@ -52,10 +50,10 @@ public:
 
 class CoContext final {
 private:
-	HRESULT m_result;
+	::HRESULT m_result;
 
 public:
 	CoContext();
 	~CoContext();
-	HRESULT Result();
+	::HRESULT Result();
 };
